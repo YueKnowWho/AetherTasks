@@ -1,2 +1,2 @@
 import './style.css';
-console.log("Webpack is working!");
+import {createTask} from "./task.js";
