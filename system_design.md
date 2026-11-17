@@ -7,17 +7,19 @@
         - create project
         - read project list
         - delete project
+        - project lookup
 
 - Project
     - properties
-        - name
         - id
+        - title
         - list of to do objects
     - methods
         - project constructor
         - create a new task
         - read project name
         - read task list
+        - task lookup
         - read task
         - update project name
         - delete task
@@ -36,8 +38,8 @@
         - toggle complete
 - storage
     - methods
-        - save storage from project manager
-        - update project manager from storage
+        - save project manager to storage
+        - load project manager from storage
         - clear storage
 - domController
     - properties
@@ -52,7 +54,7 @@
 index.js (Controller / Entry Point)
             │                        │
             ▼                        ▼
-    projectManager.js            domController.js
+    projectManager.js               domController.js
     │           │               (Pure DOM/UI)
     ▼           ▼
 project.js    storage.js

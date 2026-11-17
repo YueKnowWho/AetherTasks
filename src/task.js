@@ -6,28 +6,59 @@ export function createTask({
   priority = "none",
   complete = false,
 } = {}) {
-    return {
-        id,
-        title,
-        description,
-        dueDate,
-        priority,
-        complete,
+  const taskId = id;
+  let taskTitle = title;
+  let taskDescription = description;
+  let taskDueDate = dueDate;
+  let taskPriority = priority;
+  let isComplete = complete;
+  return Object.freeze({
+    get id() {
+      return taskId;
+    },
 
-        update({
-            title = this.title,
-            description = this.description,
-            dueDate = this.dueDate,
-            priority = this.priority,
-        } = {}) {
-            this.title = title;
-            this.description = description;
-            this.dueDate = dueDate;
-            this.priority = priority;
-        },
+    get title() {
+      return taskTitle;
+    },
 
-        toggleComplete() {
-            this.complete = !this.complete;
-        },
-    };  
+    get description() {
+      return taskDescription;
+    },
+
+    get dueDate() {
+      return taskDueDate;
+    },
+
+    get priority() {
+      return taskPriority;
+    },
+
+    get complete() {
+      return isComplete;
+    },
+    update({
+      title = taskTitle,
+      description = taskDescription,
+      dueDate = taskDueDate,
+      priority = taskPriority,
+    } = {}) {
+      taskTitle = title;
+      taskDescription = description;
+      taskDueDate = dueDate;
+      taskPriority = priority;
+    },
+    toggleComplete() {
+      isComplete = !isComplete;
+    },
+    toJSON() {
+      return {
+        id: taskId,
+        title: taskTitle,
+        description: taskDescription,
+        dueDate: taskDueDate,
+        priority: taskPriority,
+        complete: isComplete,
+      };
+    },
+  });
 }
