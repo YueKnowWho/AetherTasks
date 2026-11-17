@@ -23,7 +23,7 @@ export function createDomController(
     <div>
       <p class="eyebrow">PERSONAL WORKSPACE</p>
       <h1>Aether<span>Tasks</span></h1>
-      <p class="header-subtitle">A calm space for focused progress.</p>
+      <p class="current-date">${format(new Date(), "EEEE, MMMM d, yyyy")}</p>
     </div>
   `;
 
@@ -49,14 +49,7 @@ export function createDomController(
   addProjectButton.className = "primary-button small-button";
   addProjectButton.type = "button";
   addProjectButton.textContent = "+ New project";
-  addProjectButton.addEventListener("click", () => {
-    const title = window.prompt("Project name");
-    if (title?.trim()) {
-      const project = projectManager.addProject({ title: title.trim() });
-      selectedProjectId = project.id;
-      persistAndRender();
-    }
-  });
+  addProjectButton.addEventListener("click", openProjectModal);
   sidebarHeading.append(addProjectButton);
 
   const projectNavigation = document.createElement("nav");
@@ -76,6 +69,54 @@ export function createDomController(
   layout.append(sidebar, content);
   content.append(summary, taskBoard);
   app.append(background, header, layout);
+
+  const projectModal = document.createElement("div");
+  projectModal.className = "modal-backdrop";
+  projectModal.hidden = true;
+  projectModal.innerHTML = `
+    <form class="project-modal glass-panel" aria-labelledby="project-modal-title">
+      <button class="modal-close icon-button subtle" type="button" aria-label="Close dialog">×</button>
+      <p class="eyebrow">NEW PROJECT</p>
+      <h2 id="project-modal-title">Name your project</h2>
+      <p class="modal-description">Give your workspace a title so you can find it quickly.</p>
+      <label class="modal-label" for="project-title-input">Project title</label>
+      <input id="project-title-input" name="title" type="text" maxlength="80" required autofocus>
+      <div class="modal-actions">
+        <button class="secondary-button" type="button" data-cancel>Cancel</button>
+        <button class="primary-button" type="submit">Create project</button>
+      </div>
+    </form>
+  `;
+  app.append(projectModal);
+
+  const projectModalForm = projectModal.querySelector("form");
+  const projectTitleInput = projectModal.querySelector("#project-title-input");
+
+  projectModal.addEventListener("click", (event) => {
+    if (event.target === projectModal) closeProjectModal();
+  });
+  projectModal.querySelector(".modal-close").addEventListener("click", closeProjectModal);
+  projectModal.querySelector("[data-cancel]").addEventListener("click", closeProjectModal);
+  projectModalForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const title = projectTitleInput.value.trim();
+    if (!title) return;
+
+    const project = projectManager.addProject({ title });
+    selectedProjectId = project.id;
+    closeProjectModal();
+    persistAndRender();
+  });
+
+  function openProjectModal() {
+    projectModal.hidden = false;
+    projectTitleInput.value = "";
+    projectTitleInput.focus();
+  }
+
+  function closeProjectModal() {
+    projectModal.hidden = true;
+  }
 
   function getSelectedProject() {
     return selectedProjectId === null
@@ -169,6 +210,7 @@ export function createDomController(
         <p class="eyebrow">CURRENT PROJECT</p>
         <h2 class="project-title"></h2>
       </div>
+      <button class="primary-button add-task-button" type="submit">Add task</button>
       <button class="danger-button" type="button">Delete project</button>
     `;
     boardHeader.querySelector(".project-title").textContent = project.title;
@@ -182,27 +224,56 @@ export function createDomController(
     controls.className = "board-controls";
     controls.innerHTML = `
       <form class="task-form">
-        <input name="title" type="text" placeholder="What needs to be done?" required>
-        <input name="dueDate" type="date" aria-label="Due date">
-        <button class="primary-button" type="submit">Add task</button>
+        <div class="task-input-row">
+          <label>
+            <span>What needs to be done?</span>
+            <input name="title" type="text" placeholder="Task title" required>
+          </label>
+          <label>
+            <span>Date</span>
+            <input name="dueDate" type="date" aria-label="Due date">
+          </label>
+          <label>
+            <span>Priority</span>
+            <select name="priority" class="priority-select priority-none" aria-label="Task priority">
+              <option value="none" class="priority-option priority-none">None</option>
+              <option value="low" class="priority-option priority-low">Low</option>
+              <option value="medium" class="priority-option priority-medium">Medium</option>
+              <option value="high" class="priority-option priority-high">High</option>
+            </select>
+          </label>
+        </div>
       </form>
       <div class="filter-row">
         <div class="filter-pills">
-          <button type="button" data-filter="all" class="filter-pill active">All</button>
+          <button type="button" data-filter="all" class="filter-pill">All</button>
           <button type="button" data-filter="active" class="filter-pill">Active</button>
           <button type="button" data-filter="completed" class="filter-pill">Completed</button>
         </div>
-        <input class="search-input" type="search" placeholder="Search tasks" aria-label="Search tasks">
+        <label class="search-label">
+          <span>Search</span>
+          <input class="search-input" type="search" placeholder="Search tasks" aria-label="Search tasks">
+        </label>
       </div>
     `;
 
     const form = controls.querySelector(".task-form");
+    const priorityInput = form.querySelector('[name="priority"]');
+    priorityInput.addEventListener("change", () => {
+      priorityInput.className = `priority-select priority-${priorityInput.value}`;
+    });
+    boardHeader.querySelector(".add-task-button").addEventListener("click", () => {
+      if (form.reportValidity()) {
+        form.requestSubmit();
+      }
+    });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       const data = new FormData(form);
       project.addTask({
         title: data.get("title"),
         dueDate: data.get("dueDate"),
+        priority: data.get("priority"),
       });
       persistAndRender();
     });
@@ -210,6 +281,12 @@ export function createDomController(
     controls.querySelectorAll("[data-filter]").forEach((button) => {
       button.addEventListener("click", () => {
         statusFilter = button.dataset.filter;
+        controls.querySelectorAll("[data-filter]").forEach((filterButton) => {
+          filterButton.classList.toggle(
+            "active",
+            filterButton.dataset.filter === statusFilter,
+          );
+        });
         renderTaskBoard();
       });
     });
@@ -278,9 +355,23 @@ export function createDomController(
 
     const actions = document.createElement("div");
     actions.className = "task-actions";
-    const priority = document.createElement("span");
-    priority.className = `priority priority-${task.priority}`;
-    priority.textContent = task.priority;
+    const prioritySelect = document.createElement("select");
+    prioritySelect.className = `priority-select priority-${task.priority}`;
+    prioritySelect.setAttribute("aria-label", `Priority for ${task.title}`);
+    ["none", "low", "medium", "high"].forEach((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.className = `priority-option priority-${value}`;
+      option.textContent = value === "none"
+        ? "None"
+        : `${value[0].toUpperCase()}${value.slice(1)}`;
+      option.selected = value === task.priority;
+      prioritySelect.append(option);
+    });
+    prioritySelect.addEventListener("change", () => {
+      task.update({ priority: prioritySelect.value });
+      persistAndRender();
+    });
     const deleteButton = document.createElement("button");
     deleteButton.className = "icon-button subtle";
     deleteButton.type = "button";
@@ -290,7 +381,7 @@ export function createDomController(
       project.removeTask(task.id);
       persistAndRender();
     });
-    actions.append(priority, deleteButton);
+    actions.append(prioritySelect, deleteButton);
     item.append(completeButton, details, actions);
     return item;
   }
