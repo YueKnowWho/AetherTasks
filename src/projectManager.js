@@ -12,6 +12,20 @@ export function createProjectManager({ projectList = [] } = {}) {
       return projects.find((project) => project.id === projectId);
     },
 
+    get taskSummary() {
+      const tasks = projects.flatMap((project) => project.toDoList);
+      const completed = tasks.filter((task) => task.complete).length;
+
+      return {
+        total: tasks.length,
+        completed,
+        active: tasks.length - completed,
+        completionPercent: tasks.length === 0
+          ? 0
+          : Math.round((completed / tasks.length) * 100),
+      };
+    },
+
     addProject(projectData = {}) {
       const project = createProject(projectData);
       projects.push(project);
