@@ -49,7 +49,7 @@
         - render project manager
         - render project helper
         - render task helper
-        - update mode
+        - update color mode
 
 index.js (Controller / Entry Point)
             │                        │
